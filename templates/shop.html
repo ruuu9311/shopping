@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>比價購GO！ - 比價神器</title>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#006989",
+                        secondary: "#E88D67",
+                        accent: "#FFE05C",
+                        muted: "#ececf0",
+                        "muted-foreground": "#717182",
+                        border: "rgba(0, 0, 0, 0.1)",
+                    },
+                    fontFamily: {
+                        sans: ['Segoe UI', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/shop.css') }}">
+</head>
+<body class="bg-[#f3f7ec] text-slate-900">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+    {% raw %}
+        const { useState, useEffect, useMemo } = React;
+
+        const Icons = {
+            Filter: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+            SlidersHorizontal: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>,
+            ArrowUpDown: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>,
+            X: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,
+            Star: ({ className, fill }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={fill || "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="12 2 15.09 8.26 21.78 9.27 16.94 14.14 18.18 21.02 12 17.77 5.82 21.02 7.06 14.14 2.22 9.27 8.91 8.26 12 2"/></svg>
+        };
+
+        const ProductCard = ({ product, minPriceGlobal }) => {
+            const platformColors = {
+                PChome: "bg-[#df2029]",
+                MOMO: "bg-[#d61669]",
+                "博客來": "bg-[#5d9223]",
+            };
+            
+            const isCheapest = product.price === minPriceGlobal && product.price > 0;
+
+            return (
+                <div className={`bg-white rounded-2xl border ${isCheapest ? 'border-accent ring-2 ring-accent ring-opacity-50' : 'border-slate-100'} overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group h-full relative w-full max-w-sm sm:max-w-full mx-auto sm:mx-0`}>
+                    {isCheapest && (
+                        <div className="absolute top-0 left-0 bg-gradient-to-br from-accent to-[#ffd93d] text-primary text-xs font-bold px-3 py-1 rounded-br-lg z-10 shadow-sm">
+                            最低價
+                        </div>
+                    )}
+                    <div className="aspect-square relative overflow-hidden bg-[#fafafa] flex items-center justify-center p-4">
+                        <img 
+                            src={product.img} 
+                            alt={product.name} 
+                            referrerPolicy="no-referrer"
+                            onError={(e) => e.target.src = 'https://via.placeholder.com/200?text=No+Image'}
+                            className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500" 
+                        />
+                        <span className={`absolute top-3 right-3 px-4 py-1.5 rounded-full text-sm font-bold shadow-md text-white ${platformColors[product.platform] || 'bg-gray-500'}`}>
+                            {product.platform}
+                        </span>
+                    </div>
+                    <div className="p-4 space-y-2">
+                        <h3 className="line-clamp-2 min-h-[4.5rem] font-bold text-slate-800 leading-snug text-lg mb-2">{product.name}</h3>
+                        <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground text-xs">{product.sales}</span>
+                            
+                            <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg">
+                                <Icons.Star 
+                                    className="w-4 h-4 text-accent" 
+                                    fill="currentColor"
+                                />
+                                <span className="text-sm font-bold text-slate-700">{product.rating}</span>
+                            </div>
+
+                        </div>
+                        <div className="pt-1 border-t border-slate-50">
+                            <div className="text-secondary font-bold text-xl tracking-tight mb-1">
+                                NT$ {product.price.toLocaleString()}
+                            </div>
+                            <a href={product.link} target="_blank" className="bg-gradient-to-r from-primary to-[#004d6d] hover:from-[#004d6d] hover:to-primary text-white w-full py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1 transition-all shadow-sm hover:shadow-md active:scale-95">
+                                立即購買
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const FilterContent = ({ 
+            selectedPlatform, setSelectedPlatform, 
+            minPrice, setMinPrice, 
+            maxPrice, setMaxPrice, 
+            sortBy, setSortBy 
+        }) => (
+            <div className="space-y-6">
+                <div className="space-y-3">
+                    <h3 className="text-sm font-bold text-primary uppercase tracking-wider flex items-center gap-2">
+                        <Icons.Filter className="w-4 h-4" /> 平台篩選
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                        {["all", "PChome", "MOMO", "博客來"].map((platform) => (
+                            <button 
+                                key={platform} 
+                                onClick={() => setSelectedPlatform(platform)}
+                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border-2 
+                                    ${(selectedPlatform === platform) 
+                                        ? "bg-primary border-primary text-white shadow-md transform -translate-y-0.5" 
+                                        : "bg-white border-slate-200 text-slate-600 hover:border-secondary hover:text-secondary"}
+                                `}
+                            >
+                                {platform === "all" ? "全部" : platform}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <h3 className="text-sm font-bold text-primary uppercase tracking-wider">價格區間</h3>
+                    <div className="flex items-center gap-2">
+                        <input 
+                            type="number" 
+                            placeholder="最低" 
+                            value={minPrice}
+                            onChange={(e) => setMinPrice(e.target.value)}
+                            className="w-full px-3 py-2 bg-white border-2 border-slate-200 rounded-lg focus:border-secondary focus:outline-none text-sm transition-colors"
+                        />
+                        <span className="text-slate-400">-</span>
+                        <input 
+                            type="number" 
+                            placeholder="最高" 
+                            value={maxPrice}
+                            onChange={(e) => setMaxPrice(e.target.value)}
+                            className="w-full px-3 py-2 bg-white border-2 border-slate-200 rounded-lg focus:border-secondary focus:outline-none text-sm transition-colors"
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <h3 className="text-sm font-bold text-primary uppercase tracking-wider flex items-center gap-2">
+                        <Icons.ArrowUpDown className="w-4 h-4" /> 排序方式
+                    </h3>
+                    <div className="relative">
+                        <select 
+                            value={sortBy} 
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="w-full px-3 py-2 bg-white border-2 border-slate-200 rounded-lg focus:border-secondary focus:outline-none text-sm appearance-none cursor-pointer text-slate-700"
+                        >
+                            <option value="default">預設排序</option>
+                            <option value="price-asc">價格：低到高</option>
+                            <option value="price-desc">價格：高到低</option>
+                            <option value="rating">評分最高</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button 
+                    onClick={() => {
+                        setSelectedPlatform("all");
+                        setMinPrice("");
+                        setMaxPrice("");
+                        setSortBy("default");
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl text-sm font-bold text-primary bg-accent hover:bg-[#ffd93d] transition-all transform hover:-translate-y-0.5 shadow-sm"
+                >
+                    清除所有條件
+                </button>
+            </div>
+        );
+
+        function App() {
+            const [searchKeyword, setSearchKeyword] = useState("");
+            const [allProducts, setAllProducts] = useState([]);
+            const [isLoading, setIsLoading] = useState(false);
+            const [hasSearched, setHasSearched] = useState(false);
+
+            const [selectedPlatform, setSelectedPlatform] = useState("all");
+            const [minPrice, setMinPrice] = useState("");
+            const [maxPrice, setMaxPrice] = useState("");
+            const [sortBy, setSortBy] = useState("default");
+            const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+            const handleSearch = async () => {
+                const keyword = searchKeyword.trim();
+                if (!keyword) return alert('請輸入關鍵字');
+
+                setIsLoading(true);
+                setHasSearched(true);
+                setAllProducts([]);
+                
+                try {
+                    const res = await fetch(`/api/search?q=${encodeURIComponent(keyword)}`);
+                    const data = await res.json();
+                    setAllProducts(data);
+                    
+                    setSelectedPlatform("all");
+                    setMinPrice("");
+                    setMaxPrice("");
+                    setSortBy("default");
+                } catch (e) {
+                    console.error("API Error:", e);
+                    alert("無法連接到後端服務，請確認伺服器是否運行中。");
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            const filteredProducts = useMemo(() => {
+                if (allProducts.length === 0) return [];
+
+                let result = [...allProducts];
+
+                if (selectedPlatform !== "all") {
+                    result = result.filter(p => p.platform === selectedPlatform);
+                }
+
+                const min = parseFloat(minPrice) || 0;
+                const max = parseFloat(maxPrice) || Infinity;
+                result = result.filter(p => p.price >= min && p.price <= max);
+
+                switch (sortBy) {
+                    case "price-asc":
+                        result.sort((a, b) => a.price - b.price);
+                        break;
+                    case "price-desc":
+                        result.sort((a, b) => b.price - a.price);
+                        break;
+                    case "rating":
+                        result.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
+                        break;
+                    case "sales":
+                        result.sort((a, b) => {
+                            const aSales = parseInt(a.sales.toString().replace(/[^0-9]/g, '')) || 0;
+                            const bSales = parseInt(b.sales.toString().replace(/[^0-9]/g, '')) || 0;
+                            return bSales - aSales;
+                        });
+                        break;
+                }
+
+                return result;
+            }, [allProducts, selectedPlatform, minPrice, maxPrice, sortBy]);
+
+            const validPrices = filteredProducts.filter(p => p.price > 0).map(p => p.price);
+            const globalMinPrice = validPrices.length > 0 ? Math.min(...validPrices) : 0;
+            const globalMaxPrice = validPrices.length > 0 ? Math.max(...validPrices) : 0;
+            const savedAmount = globalMaxPrice - globalMinPrice;
+
+            return (
+                <div className="min-h-screen font-sans flex flex-col justify-between bg-[#f3f7ec] w-full overflow-x-hidden">
+                    <div className="w-full">
+                        <nav className="sticky top-0 z-50 bg-white shadow-sm border-b border-slate-100 w-full">
+                            <div className="container mx-auto px-4 h-[80px] flex items-center justify-between gap-6 max-w-7xl">
+                                <div className="flex items-center gap-2 shrink-0 cursor-pointer" onClick={() => window.location.reload()}>
+                                    <span className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary tracking-tighter logo-cursor hidden md:block">
+                                    比價購GO！
+                                    </span>
+                                    <span className="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary tracking-tighter logo-cursor md:hidden">
+                                    購GO!
+                                    </span>
+                                </div>
+
+                                <div className="flex-1 w-full max-w-2xl relative group mx-2 md:mx-4">
+                                    <div className="flex w-full border-2 border-primary rounded-full overflow-hidden bg-white transition-all focus-within:ring-4 focus-within:ring-secondary/20 focus-within:border-secondary">
+                                        <input 
+                                            type="text" 
+                                            placeholder="搜尋商品..." 
+                                            value={searchKeyword}
+                                            onChange={(e) => setSearchKeyword(e.target.value)}
+                                            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                                            className="flex-1 min-w-0 px-4 py-2 md:px-6 md:py-2.5 outline-none text-sm md:text-base text-slate-700 placeholder-slate-400"
+                                        />
+                                        <button 
+                                            onClick={handleSearch}
+                                            className="bg-secondary text-white px-4 py-2 md:px-8 md:py-2.5 text-sm md:text-base font-bold hover:bg-[#d67856] transition-colors whitespace-nowrap"
+                                        >   搜尋
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button className="lg:hidden p-2 text-primary hover:bg-slate-50 rounded-lg shrink-0" onClick={() => setIsMobileFiltersOpen(true)}>
+                                    <Icons.SlidersHorizontal className="w-6 h-6" />
+                                </button>
+                            </div>
+                        </nav>
+
+                        {isMobileFiltersOpen && (
+                            <div className="fixed inset-0 z-[60] lg:hidden">
+                                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setIsMobileFiltersOpen(false)} />
+                                <div className="absolute right-0 top-0 bottom-0 w-80 bg-white shadow-2xl p-6 overflow-y-auto" style={{animation: 'slideIn 0.3s ease-out'}}>
+                                    <div className="flex justify-between items-center mb-8">
+                                        <h2 className="text-lg font-bold text-primary">篩選與排序</h2>
+                                        <button className="p-2 hover:bg-slate-100 rounded-full text-slate-500" onClick={() => setIsMobileFiltersOpen(false)}>
+                                            <Icons.X className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                    <FilterContent 
+                                        selectedPlatform={selectedPlatform} setSelectedPlatform={setSelectedPlatform}
+                                        minPrice={minPrice} setMinPrice={setMinPrice}
+                                        maxPrice={maxPrice} setMaxPrice={setMaxPrice}
+                                        sortBy={sortBy} setSortBy={setSortBy}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="container mx-auto px-4 py-8 max-w-7xl">
+                            <div className="flex flex-col lg:flex-row gap-8">
+                                <aside className="hidden lg:block w-60 shrink-0 space-y-8 sticky top-28 h-fit">
+                                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                                        <FilterContent 
+                                            selectedPlatform={selectedPlatform} setSelectedPlatform={setSelectedPlatform}
+                                            minPrice={minPrice} setMinPrice={setMinPrice}
+                                            maxPrice={maxPrice} setMaxPrice={setMaxPrice}
+                                            sortBy={sortBy} setSortBy={setSortBy}
+                                        />
+                                    </div>
+                                </aside>
+
+                                <main className="flex-1 min-w-0">
+                                    <div className="bg-gradient-to-r from-primary to-[#004d6d] rounded-xl p-5 shadow-lg mb-6 text-white flex flex-wrap items-center justify-between gap-4 stats-cursor w-full">
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-center">
+                                                <div className="text-xs opacity-80 mb-1">本次可省</div>
+                                                <div className="text-2xl font-bold text-accent">${savedAmount.toLocaleString()}</div>
+                                            </div>
+                                            <div className="w-px h-10 bg-white/20"></div>
+                                            <div className="text-center">
+                                                <div className="text-xs opacity-80 mb-1">搜尋結果</div>
+                                                <div className="text-2xl font-bold">{filteredProducts.length} <span className="text-sm font-normal">個商品</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {isLoading && (
+                                        <div className="text-center py-20">
+                                            <div className="inline-block w-16 h-16 mb-4">
+                                                <div className="w-full h-full border-4 border-slate-200 border-t-secondary rounded-full animate-spin"></div>
+                                            </div>
+                                            <p className="text-primary font-medium text-lg animate-pulse">正在比價中...</p>
+                                        </div>
+                                    )}
+
+                                    {!isLoading && (
+                                        <>
+                                            {filteredProducts.length === 0 ? (
+                                                <div className="bg-white rounded-2xl p-20 text-center border-2 border-dashed border-slate-200">
+                                                    <div className="text-6xl mb-4">
+                                                        {hasSearched ? "😢" : "🛍️"}
+                                                    </div>
+                                                    <h3 className="text-xl font-bold text-primary mb-2">
+                                                        {hasSearched ? "找不到符合條件的商品" : "準備好開始比價了嗎？"}
+                                                    </h3>
+                                                    <p className="text-slate-500">
+                                                        {hasSearched ? "試試調整關鍵字或篩選條件" : "輸入商品名稱，幫您找出全網最低價"}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                                    {filteredProducts.map((product) => (
+                                                        <ProductCard key={product.id} product={product} minPriceGlobal={globalMinPrice} />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </main>
+                            </div>
+                        </div>
+                    </div>
+
+                    <footer className="mt-auto py-8 bg-gradient-to-r from-[#004d6d] to-primary text-white text-center w-full">
+                        <div className="container mx-auto px-4">
+                            <p className="opacity-90">Copyright © 2025 比價購GO！ | 比價神器. All Rights Reserved.</p>
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    {% endraw %}
+    </script>
+</body>
+</html>

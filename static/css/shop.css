@@ -1,0 +1,32 @@
+::-webkit-scrollbar { 
+    width: 8px; 
+}
+::-webkit-scrollbar-track { 
+    background: #f1f1f1; 
+}
+::-webkit-scrollbar-thumb { 
+    background: #cbd5e1; 
+    border-radius: 4px; 
+}
+::-webkit-scrollbar-thumb:hover { 
+    background: #94a3b8; 
+}
+
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+    -webkit-appearance: none; 
+    margin: 0; 
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+.stats-cursor {
+    cursor: url(https://cur.cursors-4u.net/cursors/cur-3/cur257.ani), url(https://cur.cursors-4u.net/cursors/cur-3/cur257.png), auto !important;
+}
+
+.logo-cursor {
+    cursor: url(https://cur.cursors-4u.net/others/oth-7/oth677.cur), auto !important;
+}
