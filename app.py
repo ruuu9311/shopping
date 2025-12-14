@@ -85,22 +85,33 @@ def scrape_pchome(keyword):
 
 # --- 🩷 MOMO 爬蟲 (Selenium 全能版) ---
 def scrape_momo(keyword):
-    print(">>> 正在爬取 MOMO (Selenium 全能版)...")
+    print(">>> 正在爬取 MOMO (Render 優化版)...")
     driver = None
     try:
         chrome_options = Options()
-        chrome_options.add_argument("--headless") 
+        # ⚠️ 關鍵修正 1：使用新版無頭模式 (比舊版更難被偵測)
+        chrome_options.add_argument("--headless=new") 
+        # ⚠️ 關鍵修正 2：Linux 環境必備參數 (解決 Render 崩潰問題)
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage") # 必加！避免記憶體不足
         chrome_options.add_argument("--window-size=1920,1080")
+        
+        # 偽裝 User-Agent
         chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         
+        # 隱藏自動化特徵
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 
+        # 建立瀏覽器
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"})
+        
+        # 移除 webdriver 標記
+        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        })
 
         url = f"https://www.momoshop.com.tw/search/{quote(keyword)}?viewport=desktop&_isFuzzy=0&searchType=1&cateLevel=0"
         driver.get(url)
@@ -109,6 +120,8 @@ def scrape_momo(keyword):
             WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             time.sleep(2)
         except: pass
+        
+        print(f"DEBUG: 當前網頁標題是 -> {driver.title}")
 
         soup = BeautifulSoup(driver.page_source, 'html.parser')
         results = []
@@ -125,7 +138,6 @@ def scrape_momo(keyword):
             products = soup.select('li.listAreaLi') or soup.select('.goodsItemLi') or soup.select('.goods-mobile-panel__item-content')
 
         for p in products:
-            # 🔥 MOMO 煞車機制
             if len(results) >= SEARCH_LIMIT: break
 
             try:
@@ -210,7 +222,6 @@ def scrape_books(keyword):
              candidates = [div.parent for div in box_divs]
 
         for tag in candidates:
-            # 🔥 博客來 煞車機制
             if len(results) >= SEARCH_LIMIT: break
 
             try:
