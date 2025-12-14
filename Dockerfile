@@ -1,19 +1,17 @@
 # 使用 Python 3.9 作為基底
 FROM python:3.9
 
-# 1. 安裝 Chrome 瀏覽器必備的依賴套件
+# 1. 安裝基本工具
 RUN apt-get update && apt-get install -y \
     wget \
-    gnupg \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. 下載並安裝 Google Chrome (穩定版)
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+# 2. 直接下載並安裝 Google Chrome (最穩定解法)
+RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
     && apt-get update \
-    && apt-get install -y google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y ./google-chrome-stable_current_amd64.deb \
+    && rm google-chrome-stable_current_amd64.deb
 
 # 3. 設定工作目錄
 WORKDIR /app
